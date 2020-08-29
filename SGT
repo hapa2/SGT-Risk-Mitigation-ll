@@ -346,8 +346,8 @@ plt.annotate('HI', (sigma_tan_hi, tan_hi_return), xytext=(0, -15), textcoords='o
 plt.scatter(sigma_tan_low, tan_low_return, c="r")
 plt.annotate('LOW', (sigma_tan_low, tan_low_return), xytext=(-10, 15), textcoords='offset points')
 # add kelly portfolio to plot
-plt.scatter(sigma_kw, kw_return, c="y")
-plt.annotate('KELLY', (sigma_kw, kw_return), xytext=(0, -15), textcoords='offset points')
+# plt.scatter(sigma_kw, kw_return, c="y")
+# plt.annotate('KELLY', (sigma_kw, kw_return), xytext=(0, -15), textcoords='offset points')
 time_graph = dt.datetime.now()
 
 plt.show()
@@ -355,18 +355,18 @@ time_graph_show = dt.datetime.now()
 
 # create simple table
 import plotly.graph_objects as go
-name_col = [names[0], names[1], names[2], 'P1', 'P2', 'MIN', 'P3/min', names[0], 'P4/min', names[1], 'P5/min', names[2], 'P6/ .5(P3+P4)', 'TAN', 'HI', 'LOW', 'KELLY']
+name_col = [names[0], names[1], names[2], 'P1', 'P2', 'MIN', 'P3/min ' + names[0], 'P4/min ' + names[1], 'P5/min ' + names[2], 'P6/ .5(P3+P4)', 'TAN', 'HI', 'LOW')  #, 'KELLY']
 returns_col = [returns[0], returns[1], returns[2], portfolio_return, portfolio2_return, mvp_return, mvp_msft_return, mvp_sbux_return, mvp_nord_return,
-               mvp_p3p4_return, tan_return, tan_hi_return, tan_low_return, kw_return]
+               mvp_p3p4_return, tan_return, tan_hi_return, tan_low_return)  #, kw_return]
 sigma_col = [sq_ann*covariances.at[names[0],names[0]], sq_ann*covariances.at[names[1],names[1]], sq_ann*covariances.at[names[2],names[2]], sigma_portfolio, sigma_portfolio2, sigma_mvp,
-             sigma_mvp_msft, sigma_mvp_sbux, sigma_mvp_nord, sigma_mvp_p3p4, sigma_tan, sigma_tan_hi, sigma_tan_low, sigma_kw]
+             sigma_mvp_msft, sigma_mvp_sbux, sigma_mvp_nord, sigma_mvp_p3p4, sigma_tan, sigma_tan_hi, sigma_tan_low)  #, sigma_kw]
 
 sharpe_col = [(returns[0]-r_f)/sq_ann*covariances.at[names[0],names[0]], (returns[1]-r_f)/sq_ann*covariances.at[names[1],names[1]],
               (returns[2]-r_f)/sq_ann*covariances.at[names[2],names[2]],
               (portfolio_return-r_f)/sigma_portfolio, (portfolio2_return-r_f)/sigma_portfolio2,  (mvp_return-r_f)/sigma_mvp,
               (mvp_msft_return-r_f)/sigma_mvp_msft, (mvp_sbux_return-r_f)/sigma_mvp_sbux, (mvp_nord_return-r_f)/sigma_mvp_nord,
-              (mvp_p3p4_return-r_f)/sigma_mvp_p3p4, (tan_return-r_f)/sigma_tan, (tan_hi_return-r_f)/sigma_tan_hi, (tan_low_return-r_f)/sigma_tan_low,
-              (sharpe_kw)]
+              (mvp_p3p4_return-r_f)/sigma_mvp_p3p4, (tan_return-r_f)/sigma_tan, (tan_hi_return-r_f)/sigma_tan_hi,
+              (tan_low_return-r_f)/sigma_tan_low]  #, sharpe_kw]
 
 fig = go.Figure(data=[go.Table(header=dict(values=['name', 'return', 'sigma', 'sharpe']),
                      cells=dict(values=[name_col, returns_col, sigma_col, sharpe_col],
