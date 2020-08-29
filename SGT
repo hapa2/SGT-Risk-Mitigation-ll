@@ -4,44 +4,63 @@ import math as m
 from numpy.linalg import inv
 import datetime as dt
 import matplotlib.pyplot as plt
+from scipy.stats import norm
+from pandas_datareader import data
 
+print()
 print(' \u0332'.join("SGT Risk Mitigation"))
-print("Input daily return: SPY, GLD, TLT and lookback time period")
+print()
+print('Input: daily returns of SPY, GLD, TLT from datareader and...')
+offset = int(input('...lookback time period [days]'))
 print()
 
 time_0 = dt.datetime.now()
 
 # input parameters:
-from pandas_datareader import data
-offset = float(input("Number of past calendar days: "))
 tdy = dt.date.today()
 start = tdy + dt.timedelta(days=-offset)
-print('from',start, 'to', tdy,),
-symbols = ["SPY", "GLD", "TLT"]
+print('from',start, 'to', tdy, ':', end=' ')
+names = ["SPY", "GLD", "TLT"]
+ln = len(names)
 ## dp = datapanel
-for i in range(len(symbols)):
-    dp = data.DataReader(symbols[i], "yahoo", start)
+for i in range(ln):
+    dp = data.DataReader(names[i], "yahoo", start)
     dp['Percent Return'] = dp['Adj Close'].pct_change()
     # check for correct order after insertion
-    # print(symbols[i])
+    # print(names[i])
     # print(dp.head())
     if i == 0:
         ddp = pd.DataFrame(dp['Percent Return'])
     else:
         ddp.insert(i, i, dp['Percent Return'])
 
-ddp.columns = symbols
+ddp.columns = names
 pts = ddp.count()[0]
-print('               ', pts, 'trading days      (', offset+1, 'calendar days)')
+print('     ', pts, 'trading days      (', offset+1, 'calendar days)')
+print('before annualization (raw numbers)')
+print(ddp.mean())
+print(ddp.cov())
+# show return distribution and cf to normal distribution
+fig, axs = plt.subplots(3, sharex = False)
+fig.tight_layout(h_pad=3)
+steps = max(3, min(m.floor(pts/4.), 50))
+x_axis = np.linspace(min(ddp.min()), max(ddp.max()), 50)
+for i in range(ln):
+    axs[i].set_title(names[i])
+
+    axs[i].hist(ddp[names[i]], bins = steps, density = True)
+    #scale.append(ddp[names[i]].max()/norm.pdf(x_axis, ddp[names[i]].mean(), ddp[names[i]].std()).max())
+    axs[i].plot(x_axis, norm.pdf(x_axis, ddp[names[i]].mean(), ddp[names[i]].std()))
+plt.show()
+
 ann = 252./pts
-mean = ann*ddp.mean()
-cov = ann*ddp.cov()
-print(mean)
-print(cov)
+sq_ann =m.sqrt(ann)
+returns = ann*ddp.mean()
+covariances = ann*ddp.cov()
+
 r_f = float(input('risk free rate: '))
 
 time_input = dt.datetime.now()
-
 
 def frontier_data(a, x, y, m1, m2, cov, r):
     for i in range(len(a)):
@@ -53,11 +72,9 @@ def frontier_data(a, x, y, m1, m2, cov, r):
 print()
 print('portfolio optimization & efficient frontier')
 print()
-names = symbols
+
 # returns = np.array([.0427, .0015, .0285])
-returns = mean
 # covariances = np.array([[.01, .0018, .0011], [.0018, .0109, .0026], [.0011, .0026, .0199]])
-covariances = cov
 inv_covariances = inv(covariances)
 print(names)
 print()
@@ -69,6 +86,12 @@ print(covariances)
 print()
 print('1/covariances:')
 print(inv_covariances)
+print()
+print('standard deviation:')
+print(sq_ann*ddp.std())
+print('correlation:')
+print(ddp.corr())
+
 
 weights = np.array([1 / 3, 1 / 3, 1 / 3])
 print()
@@ -134,8 +157,8 @@ print('minimum var portfolio sigma =', m.sqrt(sigma_mvp2))
 print()
 
 print('III')
-print('minimum variance portfolio with same expected return as MSFT')
-print('constraints: lambda1: <P3> = <MSFT>; lambda2: sum(m_i)=1')
+print('minimum variance portfolio with same expected return as', names[0])
+print('constraints: lambda1: <P3> = <', names[0], '>; lambda2: sum(m_i)=1')
 print('use 5x5 matrices:')
 cov_5x5 = np.insert(cov_4x4, 3, np.r_[returns, 0.], 0)
 cov_5x5 = np.insert(cov_5x5, 3, np.r_[returns, np.array([0., 0.])], 1)
@@ -145,16 +168,16 @@ print(names)
 print(m3_var3)
 mvp_msft_return = sum(m3_var3 * returns)
 print('minimum var portfolio return =', mvp_msft_return)
-print('compare: msft return:', returns[0])
+print('compare:', names[0], ' return:', returns[0])
 sigma_mvp_msft2 = np.dot(m3_var3.T, np.dot(covariances, m3_var3))
 print('minimum var portfolio variance =', sigma_mvp_msft2)
 sigma_mvp_msft = m.sqrt(sigma_mvp_msft2)
 print('minimum var portfolio sigma =', sigma_mvp_msft)
-print('compare: msft sigma:', m.sqrt(covariances[0][0]))
+print('compare:', names[0], ' sigma:', sq_ann * covariances.at[names[0], names[0]])
 print()
 print('IV')
-print('minimum variance portfolio with same expected return as SBUX')
-print('constraints: lambda1: <P4> = <SBUX>; lambda2: sum(m_i)=1')
+print('minimum variance portfolio with same expected return as', names[2])
+print('constraints: lambda1: <P4> = <', names[2], '>; lambda2: sum(m_i)=1')
 print('use 5x5 matrices:')
 m4_var = np.dot(inv(cov_5x5), np.array([0., 0., 0., returns[2], 1]))
 m4_var3 = m4_var[:3]
@@ -162,12 +185,12 @@ print(names)
 print(m4_var3)
 mvp_sbux_return = sum(m4_var3 * returns)
 print('minimum var portfolio return =', mvp_sbux_return)
-print('compare: sbux return:', returns[2])
+print('compare:', names[2], ' return:', returns[2])
 sigma_mvp_sbux2 = np.dot(m4_var3.T, np.dot(covariances, m4_var3))
 sigma_mvp_sbux = m.sqrt(sigma_mvp_sbux2)
 print('minimum var portfolio variance =', sigma_mvp_sbux2)
 print('minimum var portfolio sigma =', sigma_mvp_sbux)
-print('compare: sbux sigma:', m.sqrt(covariances[2][2]))
+print('compare:', names[2], ' sigma:', sq_ann * covariances.at[names[2], names[2]])
 cov34 = np.dot(m4_var3.T, np.dot(covariances, m3_var3))
 print('covariance P3P4:', cov34)
 print('correlation P3P4:', cov34 / (sigma_mvp_msft * sigma_mvp_sbux))
@@ -191,7 +214,7 @@ sigma_mvp_nord2 = np.dot(m5_var3.T, np.dot(covariances, m5_var3))
 print('minimum var portfolio variance =', sigma_mvp_nord2)
 sigma_mvp_nord = m.sqrt(sigma_mvp_nord2)
 print('minimum var portfolio sigma =', sigma_mvp_nord)
-print('compare: nord sigma:', m.sqrt(covariances[1][1]))
+print('compare: nord sigma:', sq_ann*covariances.at[names[1], names[1]])
 print()
 
 print('VI')
@@ -274,10 +297,10 @@ print('creating Kelly portfolio by methology in II')
 # r_f3 = np.array([r_f]*3)
 # r_x3 = returns-r_f3
 # aux = np.dot(inv_covariances, r_x3)
-# mt = aux / (np.dot([1, 1, 1], aux))
+# mt = aux / (np.dot([1, 1, 1], aux)) #normalizing weights
 kw = aux  #no normalization
 print(names)
-print(kw, '      leverage:', sum(abs(kw))/sum(kw))
+print(kw, '      \"leverage:\"', sum(kw))
 # kw_return = sum(kw * returns) ...this is not correct since he weights do not add up to 1
 kw_return = sum(kw*r_x3)+ r_f
 print('kelly portfolio return =', kw_return)
@@ -292,13 +315,14 @@ print('sharpe ratio =', sharpe_kw)
 time_calc = dt.datetime.now()
 
 # graphics
+plt.close()
 plt.title('minimum variance portfolios')
 plt.xlabel('$\sigma _p$')
 plt.ylabel('return$_p$')
 
 sigma_stocks = np.empty(3)
 for i in range(3):
-    sigma_stocks[i] = m.sqrt(covariances[i][i])
+    sigma_stocks[i] = sq_ann*covariances.at[names[i], names[i]]
     plt.scatter(sigma_stocks[i], returns[i], c="b")
     plt.annotate(names[i], (sigma_stocks[i], returns[i]), xytext=(5, -4), textcoords='offset points')
 plt.scatter(sigma_portfolio, portfolio_return, c="r")
@@ -331,13 +355,14 @@ time_graph_show = dt.datetime.now()
 
 # create simple table
 import plotly.graph_objects as go
-name_col = [names[0], names[1], names[2], 'P1', 'P2', 'MIN', 'P3/min MSFT', 'P4/min SBUX','P5/min NORD', 'P6/ .5(P3+P4)', 'TAN', 'HI', 'LOW', 'KELLY']
+name_col = [names[0], names[1], names[2], 'P1', 'P2', 'MIN', 'P3/min', names[0], 'P4/min', names[1], 'P5/min', names[2], 'P6/ .5(P3+P4)', 'TAN', 'HI', 'LOW', 'KELLY']
 returns_col = [returns[0], returns[1], returns[2], portfolio_return, portfolio2_return, mvp_return, mvp_msft_return, mvp_sbux_return, mvp_nord_return,
                mvp_p3p4_return, tan_return, tan_hi_return, tan_low_return, kw_return]
-sigma_col = [m.sqrt(covariances[0][0]), m.sqrt(covariances[1][1]), m.sqrt(covariances[2][2]), sigma_portfolio, sigma_portfolio2, sigma_mvp,
+sigma_col = [sq_ann*covariances.at[names[0],names[0]], sq_ann*covariances.at[names[1],names[1]], sq_ann*covariances.at[names[2],names[2]], sigma_portfolio, sigma_portfolio2, sigma_mvp,
              sigma_mvp_msft, sigma_mvp_sbux, sigma_mvp_nord, sigma_mvp_p3p4, sigma_tan, sigma_tan_hi, sigma_tan_low, sigma_kw]
 
-sharpe_col = [(returns[0]-r_f)/m.sqrt(covariances[0][0]), (returns[1]-r_f)/m.sqrt(covariances[1][1]), (returns[2]-r_f)/m.sqrt(covariances[2][2]),
+sharpe_col = [(returns[0]-r_f)/sq_ann*covariances.at[names[0],names[0]], (returns[1]-r_f)/sq_ann*covariances.at[names[1],names[1]],
+              (returns[2]-r_f)/sq_ann*covariances.at[names[2],names[2]],
               (portfolio_return-r_f)/sigma_portfolio, (portfolio2_return-r_f)/sigma_portfolio2,  (mvp_return-r_f)/sigma_mvp,
               (mvp_msft_return-r_f)/sigma_mvp_msft, (mvp_sbux_return-r_f)/sigma_mvp_sbux, (mvp_nord_return-r_f)/sigma_mvp_nord,
               (mvp_p3p4_return-r_f)/sigma_mvp_p3p4, (tan_return-r_f)/sigma_tan, (tan_hi_return-r_f)/sigma_tan_hi, (tan_low_return-r_f)/sigma_tan_low,
@@ -349,9 +374,10 @@ fig = go.Figure(data=[go.Table(header=dict(values=['name', 'return', 'sigma', 's
 fig.show()
 time_table = dt.datetime.now()
 print()
-print('Calculation time:', (time_calc-time_0).total_seconds()*1000, 'msec')
+print('Input time:', (time_input-time_0).total_seconds(), 'sec')
+print('Calculation time:', (time_calc-time_input).total_seconds()*1000, 'msec')
 print('Graph time:', (time_graph - time_calc).total_seconds()*1000, 'msec')
 #print('Graph show time:', (time_graph_show - time_graph).total_seconds(), ' sec')
 print('Table time:', (time_table - time_graph_show).total_seconds()*1000, 'msec')
-print('Total time:', (dt.datetime.now()-time_0).total_seconds()*1000, 'msec')
+print('Total time:', (dt.datetime.now()-time_0).total_seconds(), 'sec')
 print('THE END @', dt.datetime.now().strftime('%H:%M:%S'))
