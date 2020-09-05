@@ -45,12 +45,12 @@ ddp.columns = names
 pts = ddp.count()[0]
 print('     ', pts, 'trading days      (', offset+1, 'calendar days)')
 print()
-print('before annualization (raw numbers)')
-print('returns:')
+print('returns before annualization (raw numbers)')
 print(ddp.mean())
 print()
-print('covariances:')
+print('covariances before annualization:')
 print(ddp.cov())
+
 # show return distribution and cf to normal distribution
 fig, axs = plt.subplots(3)   #, sharex = False)
 fig.tight_layout(h_pad=3)
@@ -62,11 +62,35 @@ for i in range(ln):
     axs[i].plot(x_axis, norm.pdf(x_axis, ddp[names[i]].mean(), ddp[names[i]].std()))
 plt.show(block = True)
 
+# annualize returns
+print()
+print('annualized returns')
 ann = 252.
 sq_ann =m.sqrt(ann)
-returns = ann*ddp.mean()
-covariances = ann*(ddp.cov())
 
+#arithmetic
+returns_ari = ann*ddp.mean()
+covariances = ann*(ddp.cov())
+#geometric
+returns_geo = (1+ddp.mean())**ann-1
+#actual
+returns_act = (ddp+1).prod()**(ann/pts)-1
+print(pd.DataFrame([returns_ari, returns_geo, returns_act], index = ['arithmetic', 'geometric', 'actual']))
+print()
+wahl = input('choose: arithmetic[ari]  geometric[geo]  actual[act]  default = [geo]')
+print('choice is:', end= ' ')
+if wahl == 'ari':
+    returns = returns_ari
+    print('arithmetic')
+elif wahl == 'geo':
+    returns = returns_geo
+    print('geometric')
+elif wahl == 'act':
+    returns = returns_act
+    print('actual')
+else:
+    returns = returns_geo
+    print('geometric [default]')
 print()
 r_f = float(input('risk free rate: '))
 
@@ -80,10 +104,11 @@ print()
 # returns = np.array([.0427, .0015, .0285])
 # covariances = np.array([[.01, .0018, .0011], [.0018, .0109, .0026], [.0011, .0026, .0199]])
 inv_covariances = inv(covariances)
-print(names)
-print()
+# print(names)
+# print()
 print('returns:')
 print(returns)
+input('Press enter to contine.')
 print()
 print('covariances:')
 print(covariances)
@@ -96,6 +121,7 @@ print(sq_ann*ddp.std())
 print()
 print('correlation:')
 print(ddp.corr())
+input('Press enter to contine.')
 
 weights = np.array([1 / 3, 1 / 3, 1 / 3])
 print()
@@ -327,7 +353,7 @@ plt.ylabel('return$_p$')
 
 sigma_stocks = np.empty(3)
 for i in range(3):
-    sigma_stocks[i] = sq_ann*covariances.at[names[i], names[i]]
+    sigma_stocks[i] = sq_ann*ddp.std()[i]
     plt.scatter(sigma_stocks[i], returns[i], c="b")
     plt.annotate(names[i], (sigma_stocks[i], returns[i]), xytext=(5, -4), textcoords='offset points')
 plt.scatter(sigma_portfolio, portfolio_return, c="r")
